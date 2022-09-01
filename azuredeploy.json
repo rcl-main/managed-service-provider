@@ -1,66 +1,91 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2019-08-01/subscriptionDeploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-     "mspOfferName": {
-      "type": "string",
-      "metadata": {
-       "description": "Specify a unique name for your offer"
-      },
-      "defaultValue": "Ray Consulting Limited Managed Service Provider"
-     },
-     "mspOfferDescription": {
-      "type": "string",
-      "metadata": {
-       "description": "Name of the Managed Service Provider offering"
-      },
-      "defaultValue": "Provision of Azure Cloud managed services"
-     }
-    },
-    "variables": {
-     "mspRegistrationName": "[guid(parameters('mspOfferName'))]",
-     "mspAssignmentName": "[guid(parameters('mspOfferName'))]",
-     "managedByTenantId": "a71b1211-66c5-437c-8049-33803062ea1a",
-     "authorizations": [
+ "$schema": "https://schema.management.azure.com/schemas/2019-08-01/subscriptionDeploymentTemplate.json#",
+ "contentVersion": "1.0.0.0",
+ "parameters": {
+  "mspOfferName": {
+   "type": "string",
+   "metadata": {
+    "description": "Specify a unique name for your offer"
+   },
+   "defaultValue": "Ray Consulting Limited Managed Service Provider"
+  },
+  "mspOfferDescription": {
+   "type": "string",
+   "metadata": {
+    "description": "Name of the Managed Service Provider offering"
+   },
+   "defaultValue": "Provision of Azure Cloud managed services"
+  },
+  "rgName": {
+   "type": "string",
+   "defaultValue": "RCLManagedServiceRG"
+  }
+ },
+ "variables": {
+  "mspRegistrationName": "[guid(parameters('mspOfferName'))]",
+  "mspAssignmentName": "[guid(parameters('mspOfferName'))]",
+  "managedByTenantId": "a71b1211-66c5-437c-8049-33803062ea1a",
+  "authorizations": [
+   {
+    "principalId": "dc6b97d0-8016-4af6-a199-23e83f0e8f85",
+    "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+    "principalIdDisplayName": "ManagedServiceAgents"
+   },
+   {
+    "principalId": "dc6b97d0-8016-4af6-a199-23e83f0e8f85",
+    "roleDefinitionId": "91c1777a-f3dc-4fae-b103-61d183457e46",
+    "principalIdDisplayName": "ManagedServiceAgents"
+   }
+  ]
+ },
+ "resources": [
+  {
+   "type": "Microsoft.ManagedServices/registrationDefinitions",
+   "apiVersion": "2020-02-01-preview",
+   "name": "[variables('mspRegistrationName')]",
+   "properties": {
+    "registrationDefinitionName": "[parameters('mspOfferName')]",
+    "description": "[parameters('mspOfferDescription')]",
+    "managedByTenantId": "[variables('managedByTenantId')]",
+    "authorizations": "[variables('authorizations')]"
+   }
+  },
+  {
+   "type": "Microsoft.Resources/deployments",
+   "apiVersion": "2018-05-01",
+   "name": "rgAssignment",
+   "resourceGroup": "[parameters('rgName')]",
+   "dependsOn": [
+    "[resourceId('Microsoft.ManagedServices/registrationDefinitions/', variables('mspRegistrationName'))]"
+   ],
+   "properties": {
+    "mode": "Incremental",
+    "template": {
+     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+     "contentVersion": "1.0.0.0",
+     "parameters": {},
+     "resources": [
       {
-       "principalId": "dc6b97d0-8016-4af6-a199-23e83f0e8f85",
-       "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
-       "principalIdDisplayName": "ManagedServiceAgents"
+       "type": "Microsoft.ManagedServices/registrationAssignments",
+       "apiVersion": "2020-02-01-preview",
+       "name": "[variables('mspAssignmentName')]",
+       "properties": {
+        "registrationDefinitionId": "[resourceId('Microsoft.ManagedServices/registrationDefinitions/', variables('mspRegistrationName'))]"
+       }
       }
      ]
-    },
-    "resources": [
-     {
-      "type": "Microsoft.ManagedServices/registrationDefinitions",
-      "apiVersion": "2020-02-01-preview",
-      "name": "[variables('mspRegistrationName')]",
-      "properties": {
-       "registrationDefinitionName": "[parameters('mspOfferName')]",
-       "description": "[parameters('mspOfferDescription')]",
-       "managedByTenantId": "[variables('managedByTenantId')]",
-       "authorizations": "[variables('authorizations')]"
-      }
-     },
-     {
-      "type": "Microsoft.ManagedServices/registrationAssignments",
-      "apiVersion": "2020-02-01-preview",
-      "name": "[variables('mspAssignmentName')]",
-      "dependsOn": [
-       "[resourceId('Microsoft.ManagedServices/registrationDefinitions/', variables('mspRegistrationName'))]"
-      ],
-      "properties": {
-       "registrationDefinitionId": "[resourceId('Microsoft.ManagedServices/registrationDefinitions/', variables('mspRegistrationName'))]"
-      }
-     }
-    ],
-    "outputs": {
-     "mspOfferName": {
-      "type": "string",
-      "value": "[concat('Managed by', ' ', parameters('mspOfferName'))]"
-     },
-     "authorizations": {
-      "type": "array",
-      "value": "[variables('authorizations')]"
-     }
     }
    }
+  }
+ ],
+ "outputs": {
+  "mspOfferName": {
+   "type": "string",
+   "value": "[concat('Managed by', ' ', parameters('mspOfferName'))]"
+  },
+  "authorizations": {
+   "type": "array",
+   "value": "[variables('authorizations')]"
+  }
+ }
+}
